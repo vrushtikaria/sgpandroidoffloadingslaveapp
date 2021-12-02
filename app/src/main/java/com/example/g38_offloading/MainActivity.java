@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
     int PERMISSION_ID = 44;
     String myLatitude, myLongitude;
     boolean offload_flag =false;
-
+    String master_name;
     private FusedLocationProviderClient client;
 
     //available device information like socket, device name and availability status
@@ -87,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
     static final int STATE_MESSAGE_RECEIVED=5;
     static final int STATE_BATTERY_LOW=6;
     static final int STATE_DISCONNECTED=7;
-
+    static final int STATE_DENIED =8;
     int REQUEST_ENABLE_BLUETOOTH=1;
 
     //matrices to be sent
@@ -229,7 +229,7 @@ public class MainActivity extends AppCompatActivity {
                 {
                     System.out.println("Inside sever");
                     Message message=Message.obtain();
-                    message.what=STATE_CONNECTING;
+                    message.what=STATE_LISTENING;
                     handler.sendMessage(message);
 
                     socket=serverSocket.accept();
@@ -246,21 +246,16 @@ public class MainActivity extends AppCompatActivity {
                 if(socket!=null)
                 {
                     connected_socket.add(socket);
-                    socket = null;
+                    master_name=socket.getRemoteDevice().getName();
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                            builder.setMessage("Master wants to connect with you").setPositiveButton("Accept0", dialogClickListener)
+                            builder.setMessage( master_name+ " Master wants to offload matrix multiplcation, monitor location and battery level ?").setPositiveButton("Accept", dialogClickListener)
                                     .setNegativeButton("Deny", dialogClickListener).show();
                         }
                     });
-//                    if (offload_flag) {
-//                        accept_master(socket);
-//                    }
-//                    else{
-
-
+                    socket = null;
                 }
             }
         }
@@ -305,13 +300,14 @@ public class MainActivity extends AppCompatActivity {
             switch (which){
                 case DialogInterface.BUTTON_POSITIVE:
                     //Yes button clicked
-                    offload_flag =true;
                     accept_master(connected_socket.get(0));
                     break;
 
                 case DialogInterface.BUTTON_NEGATIVE:
                     //No button clicked
-                     offload_flag=false;
+                    Message message=Message.obtain();
+                    message.what=STATE_DENIED;
+                    handler.sendMessage(message);
                      connected_socket.remove(0);
                     break;
             }
@@ -332,10 +328,13 @@ public class MainActivity extends AppCompatActivity {
                     connStatus.setText("Connecting");
                     break;
                 case STATE_CONNECTED:
-                    connStatus.setText("Connected");
+                    connStatus.setText("Connected to " +master_name);
                     break;
                 case STATE_CONNECTION_FAILED:
                     connStatus.setText("Connection Failed");
+                    break;
+                case STATE_DENIED:
+                    connStatus.setText("Connection Denied");
                     break;
                 case STATE_DISCONNECTED:
                     connStatus.setText("Disconnected");
