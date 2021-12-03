@@ -58,17 +58,12 @@ public class MainActivity extends AppCompatActivity {
     FusedLocationProviderClient mFusedLocationClient;
     int PERMISSION_ID = 44;
     String myLatitude, myLongitude;
-    boolean offload_flag =false;
     String master_name;
     private FusedLocationProviderClient client;
 
     //available device information like socket, device name and availability status
     BluetoothAdapter bluetoothAdapter;
-    BluetoothDevice[] btArray;
     int available_devices=0; //maintained at master to keep track of number of available slaves that were free
-
-    ArrayAdapter<String> arrayAdapter; //maintained at master to show list of available deivces in list view
-    ArrayList<BluetoothDevice> stringArrayList=new ArrayList<BluetoothDevice>(); //maintains the list of connected devices
 
     ArrayList<BluetoothSocket> connected_socket=new ArrayList<BluetoothSocket>(); //maintains the list of connected sockets
 
@@ -90,21 +85,6 @@ public class MainActivity extends AppCompatActivity {
     static final int STATE_DENIED =8;
     int REQUEST_ENABLE_BLUETOOTH=1;
 
-    //matrices to be sent
-    int[][] inputs_A;
-    int[][] inputs_B;
-    int[][] output_Array;
-
-    int total_rowcount=0; //maintained at master to maintain how many rows were there in matrix
-    //int index_inputs=0;
-    String battery_details=""; //maitains the information related to battery details so that will be displayed in message box
-    int output_rowcount=0; //maintained at master to check how many rows were received
-
-    int broadcasting_started=1; //maintained at master so that if row result was not received even after 5 seconds from one slave it can be sent to other available slaves
-
-    long start_time; //maintained at master to keep track of time at which matrix multiplication was started either by mobile offloading or without offloading
-    long finish_time; //maintained at master to keep track of time at which matrix multiplication was completed either by mobile offloading or without offloading
-
     Map<BluetoothSocket,ArrayList<String>> connection_status=new HashMap<BluetoothSocket, ArrayList<String>>(); //maintained at master to keep track of whether the slave was busy and free
     Map<String,Integer> battery_final=new HashMap<String,Integer>(); //maintained at master to store batter level status of slaves once offloading is done
     Map<String,Integer> battery_initial=new HashMap<String,Integer>(); //maintained at master to store the battery level status of slaves when they are connected
@@ -122,8 +102,6 @@ public class MainActivity extends AppCompatActivity {
     String device_name;
 
     String display_msg=""; //maintains what message to be displayed in message box
-
-//    String client_server; //shows if it's client or server
 
     String device_loc ="";  //maintains latitude and longitude information
     int battery_check_count=1; //maintained at slave to check when it has clicked reject offloading and trying to accept offloading again whether offloading was already completed or not at master
