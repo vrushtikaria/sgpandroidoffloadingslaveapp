@@ -8,31 +8,35 @@
 
     <TextView
         android:id="@+id/myLocation"
-        android:layout_width="379dp"
-        android:layout_height="18dp"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="28dp"
+        android:layout_width="185dp"
+        android:layout_height="27dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="20dp"
         android:text="None"
-        app:layout_constraintStart_toStartOf="parent"
+        android:textSize="16sp"
+        app:layout_constraintStart_toEndOf="@+id/textView3"
         app:layout_constraintTop_toBottomOf="@+id/batteryStatus" />
 
     <TextView
         android:id="@+id/conninfo"
-        android:layout_width="119dp"
-        android:layout_height="19dp"
+        android:layout_width="148dp"
+        android:layout_height="28dp"
         android:layout_marginStart="20dp"
-        android:layout_marginTop="28dp"
+        android:layout_marginTop="16dp"
         android:text="Connection Status"
+        android:textSize="20sp"
+        android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/myLocation" />
 
     <TextView
         android:id="@+id/connStatus"
-        android:layout_width="379dp"
-        android:layout_height="18dp"
+        android:layout_width="364dp"
+        android:layout_height="28dp"
         android:layout_marginStart="20dp"
         android:layout_marginTop="12dp"
         android:text="Not Connected"
+        android:textSize="16sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/conninfo" />
 
@@ -40,7 +44,7 @@
         android:id="@+id/listen"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="48dp"
+        android:layout_marginTop="28dp"
         android:text="Help in Offloading"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.497"
@@ -49,21 +53,75 @@
 
     <TextView
         android:id="@+id/infoView"
-        android:layout_width="372dp"
-        android:layout_height="348dp"
+        android:layout_width="360dp"
+        android:layout_height="340dp"
+        android:layout_marginTop="8dp"
+        android:background="#000000"
+        android:backgroundTint="#412196F3"
+        android:scrollIndicators="bottom"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/info" />
+
+    <TextView
+        android:id="@+id/batteryStatus"
+        android:layout_width="184dp"
+        android:layout_height="23dp"
         android:layout_marginStart="20dp"
-        android:layout_marginTop="68dp"
+        android:layout_marginTop="44dp"
+        android:text="None"
+        android:textSize="16sp"
+        app:layout_constraintStart_toEndOf="@+id/textView2"
+        app:layout_constraintTop_toBottomOf="@+id/listen" />
+
+    <Button
+        android:id="@+id/clearLog"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        android:layout_width="105dp"
+        android:layout_height="38dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="16dp"
+        android:background="#FFFFFF"
+        android:text="Clear Log"
+        android:textColorLink="#D13D3D"
+        android:textSize="10sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/infoView" />
+
+    <TextView
+        android:id="@+id/info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Log"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/connStatus" />
 
     <TextView
-        android:id="@+id/batteryStatus"
-        android:layout_width="379dp"
-        android:layout_height="18dp"
+        android:id="@+id/textView2"
+        android:layout_width="146dp"
+        android:layout_height="27dp"
         android:layout_marginStart="20dp"
         android:layout_marginTop="44dp"
-        android:text="None"
+        android:text="My Battery "
+        android:textSize="20sp"
+        android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/listen" />
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="149dp"
+        android:layout_height="29dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="16dp"
+        android:text="My Location"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView2" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

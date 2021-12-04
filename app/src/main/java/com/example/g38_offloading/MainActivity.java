@@ -44,14 +44,13 @@ import com.google.android.gms.tasks.Task;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
-    Button listen;
+    Button startOffloading,clearLog;
     TextView myLocation,connStatus,batteryStatus, info;
 
     //variables for location
@@ -142,7 +141,8 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent)
         {
             battery_level=intent.getIntExtra(BatteryManager.EXTRA_LEVEL,0);
-            batteryStatus.setText("Battery level: "+String.valueOf(battery_level)+"%");
+//            batteryStatus.setText("Battery level: "+String.valueOf(battery_level)+"%");
+            batteryStatus.setText(String.valueOf(battery_level)+"%");
         }
     };
 
@@ -161,8 +161,8 @@ public class MainActivity extends AppCompatActivity {
         myLocation = (TextView) findViewById(R.id.myLocation);
         info = (TextView) findViewById(R.id.infoView);
         info.setMovementMethod(ScrollingMovementMethod.getInstance());
-        listen = (Button) findViewById(R.id.listen);
-
+        startOffloading = (Button) findViewById(R.id.listen);
+        clearLog = (Button) findViewById(R.id.clearLog);
         dataSerializer = new DataConversionSerial();
 
         // show location
@@ -182,7 +182,7 @@ public class MainActivity extends AppCompatActivity {
             Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableIntent,REQUEST_ENABLE_BLUETOOTH);
         }
-        listen.setOnClickListener(new View.OnClickListener()
+        startOffloading.setOnClickListener(new View.OnClickListener()
         {
             @Override
             public void onClick(View v) {
@@ -191,6 +191,13 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent_available);
                 slaveListen slavelisten=new slaveListen();
                 slavelisten.start();
+            }
+        });
+
+        clearLog.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                info.setText("");
             }
         });
     }
@@ -308,7 +315,7 @@ public class MainActivity extends AppCompatActivity {
                     Message message=Message.obtain();
                     message.what=STATE_DENIED;
                     handler.sendMessage(message);
-                     connected_socket.remove(0);
+                    connected_socket.remove(0);
                     break;
             }
         }
@@ -599,7 +606,8 @@ public class MainActivity extends AppCompatActivity {
                             myLatitude=Double.toString(location.getLatitude());
                             myLongitude=Double.toString(location.getLongitude());
                             device_loc=myLatitude+","+myLongitude;
-                            myLocation.setText("My location: "+ myLatitude + ", " + myLongitude);
+//                            myLocation.setText("My location: "+ myLatitude + ", " + myLongitude);
+                            myLocation.setText(myLatitude + ", " + myLongitude);
                         }
                     }
                 });
@@ -637,7 +645,7 @@ public class MainActivity extends AppCompatActivity {
             Location mLastLocation = locationResult.getLastLocation();
             myLatitude = Double.toString(mLastLocation.getLatitude());
             myLongitude = Double.toString(mLastLocation.getLongitude());
-            myLocation.setText("My location: " + myLatitude + ", " + myLongitude);
+            myLocation.setText(myLatitude + ", " + myLongitude);
         }
     };
 
