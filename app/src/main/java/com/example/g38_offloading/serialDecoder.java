@@ -40,7 +40,12 @@ public class serialDecoder implements Serializable {
     public int getRow() {
         return row;
     }
-
+//    public int[] geta() {
+//        return a;
+//    }
+//    public int[][] getb() {
+//        return b;
+//    }
     public void setRow(int row) {
         this.row = row;
     }

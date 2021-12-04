@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -360,9 +361,11 @@ public class MainActivity extends AppCompatActivity {
                         {
                             serialDecoder tempMsg = (serialDecoder) o;
 
-                            display_msg += "Received row " + tempMsg.getRow() + " from Master" + "\n";
+//                            display_msg += "Received row " + tempMsg.getRow() + " from Master" + "\n";
                             //calucate the matrix multiplication
+//                            display_msg+= "Master sent data\n";
 
+                          display_msg += master_name +" sent " + Arrays.toString(tempMsg.getA());
                             info.setText(display_msg.trim());
                             for (BluetoothSocket socket : connected_socket)
                             {
