@@ -292,9 +292,31 @@ public class MainActivity extends AppCompatActivity {
                     //No button clicked
                     Message message=Message.obtain();
                     message.what=STATE_DENIED;
+//                    System.out.println("State Denied. Message Set");
                     handler.sendMessage(message);
+                    send_denied_to_master(connected_socket.get(0));
                     connected_socket.remove(0);
+                    sendReceive =null;
                     break;
+            }
+        }
+
+        private void send_denied_to_master(BluetoothSocket socket) {
+            if (!connection_status.containsKey(socket)) {
+                ArrayList<String> temp = new ArrayList<String>();
+                temp.add(socket.getRemoteDevice().getName());
+                temp.add("free");
+                available_devices++;
+                connection_status.put(socket, temp);
+            }
+            sendReceive = new SendReceive(socket);
+            sendReceive.start();
+
+            try {
+                sendReceive.write(dataSerializer.objectToByteArray(device_name + ":Denied:NoConsent"));
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
     };
