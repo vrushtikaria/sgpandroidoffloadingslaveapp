@@ -1,15 +1,9 @@
 package com.example.g38_offloading;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
@@ -28,10 +22,14 @@ import android.os.Message;
 import android.provider.Settings;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -74,7 +72,6 @@ public class MainActivity extends AppCompatActivity {
     public BluetoothServerSocket serverSocket;
 
     //connections status checks
-
     static final int STATE_LISTENING =1;
     static final int STATE_CONNECTING=2;
     static final int STATE_CONNECTED=3;
@@ -86,12 +83,6 @@ public class MainActivity extends AppCompatActivity {
     int REQUEST_ENABLE_BLUETOOTH=1;
 
     Map<BluetoothSocket,ArrayList<String>> connection_status=new HashMap<BluetoothSocket, ArrayList<String>>(); //maintained at master to keep track of whether the slave was busy and free
-    Map<String,Integer> battery_final=new HashMap<String,Integer>(); //maintained at master to store batter level status of slaves once offloading is done
-    Map<String,Integer> battery_initial=new HashMap<String,Integer>(); //maintained at master to store the battery level status of slaves when they are connected
-    Map<Integer,Long> row_sent_time=new HashMap<Integer, Long>(); //maintained at master to check at what time row was sent to slave
-    ArrayList<Integer> row_check=new ArrayList<Integer>(); //maintained at master to check what all rows are yet to be sent
-
-    Map<Integer,String> outputRows_check=new HashMap<Integer, String>(); //maintained at master to check what all rows were received from slave
 
     private static final String APP_NAME= "MobOffloading";
     private static final UUID MY_UUID=UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); //UUID which helps in connection establishment between master and slave
@@ -100,28 +91,22 @@ public class MainActivity extends AppCompatActivity {
     int battery_threshold=40; //battery threshold that should be maintained for the device to do offloading
 
     String device_name;
-
     String display_msg=""; //maintains what message to be displayed in message box
 
     String device_loc ="";  //maintains latitude and longitude information
     int battery_check_count=1; //maintained at slave to check when it has clicked reject offloading and trying to accept offloading again whether offloading was already completed or not at master
-    int temp_batterycheck;
-
-    int battery_level_start=0;
 
     DataConversionSerial dataSerializer;
     serialEncoder response_temp;
     private Handler offloadingHandler=new Handler();  //handles the connection status and messages received
-    String connected_device;
 
-    //below broadcast Receiver is getting the battery level of the device. It will always show the latest value of the batter level
+    //monitoring of own battery level
     private BroadcastReceiver mBatInfoReceiver= new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent)
         {
             battery_level=intent.getIntExtra(BatteryManager.EXTRA_LEVEL,0);
-//            batteryStatus.setText("Battery level: "+String.valueOf(battery_level)+"%");
-            batteryStatus.setText(String.valueOf(battery_level)+"%");
+            batteryStatus.setText("My battery level: " + String.valueOf(battery_level) + "%");
         }
     };
 
@@ -252,8 +237,6 @@ public class MainActivity extends AppCompatActivity {
         Message message = Message.obtain();
         message.what = STATE_CONNECTED;
         handler.sendMessage(message);
-
-
 //        connected_socket.add(socket);
 
         if (!connection_status.containsKey(socket)) {
@@ -362,7 +345,7 @@ public class MainActivity extends AppCompatActivity {
                             serialDecoder tempMsg = (serialDecoder) o;
 
 //                            display_msg += "Received row " + tempMsg.getRow() + " from Master" + "\n";
-                            //calucate the matrix multiplication
+                            //calculate the matrix multiplication
 //                            display_msg+= "Master sent data\n";
 
                           display_msg += master_name +" sent " + Arrays.toString(tempMsg.getA());
@@ -394,9 +377,9 @@ public class MainActivity extends AppCompatActivity {
                                     {
                                         response_temp=response;
                                     }
-                                    //If batter level less than threshold disconnect from master and communicate to master to disconnect from it
+
                                     if (battery_level < battery_threshold) {
-                                        sendReceive.write(dataSerializer.objectToByteArray(device_name + ":Battery Level:Batter level is low"));
+                                        sendReceive.write(dataSerializer.objectToByteArray(device_name + ":Battery Level:Battery level low"));
                                         //bluetoothAdapter.disable();
                                         //connection_status = new HashMap<BluetoothSocket, ArrayList<String>>();
                                         if(connection_status.size()>0)
@@ -416,7 +399,7 @@ public class MainActivity extends AppCompatActivity {
                             //Toast.makeText(getApplicationContext(),tempMsg,Toast.LENGTH_LONG).show();
                             String[] messages=tempMsg.split(":");
                             //If slave has received Battery level low from master disconnect from master
-                            if(messages[2].equals("Batter level is low"))
+                            if(messages[2].equals("Battery level low"))
                             {
                                 connStatus.setText("Disconnected");
                                 info.setText("Battery low at master");
@@ -540,7 +523,7 @@ public class MainActivity extends AppCompatActivity {
 
                 try
                 {
-                    write(dataSerializer.objectToByteArray(device_name+":Battery Level:Batter level is low"));
+                    write(dataSerializer.objectToByteArray(device_name+":Battery Level:Battery level low"));
                 }
                 catch (IOException e)
                 {
@@ -609,8 +592,8 @@ public class MainActivity extends AppCompatActivity {
                             myLatitude=Double.toString(location.getLatitude());
                             myLongitude=Double.toString(location.getLongitude());
                             device_loc=myLatitude+","+myLongitude;
-//                            myLocation.setText("My location: "+ myLatitude + ", " + myLongitude);
-                            myLocation.setText(myLatitude + ", " + myLongitude);
+//
+                            myLocation.setText("My location: " + myLatitude + ", " + myLongitude);
                         }
                     }
                 });
@@ -628,16 +611,14 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("MissingPermission")
     private void requestNewLocationData() {
 
-        // Initializing LocationRequest
-        // object with appropriate methods
+        // Initializing LocationRequest object with appropriate methods
         LocationRequest mLocationRequest = new LocationRequest();
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         mLocationRequest.setInterval(5);
         mLocationRequest.setFastestInterval(0);
         mLocationRequest.setNumUpdates(1);
 
-        // setting LocationRequest
-        // on FusedLocationClient
+        // setting LocationRequest on FusedLocationClient
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
     }
@@ -648,7 +629,7 @@ public class MainActivity extends AppCompatActivity {
             Location mLastLocation = locationResult.getLastLocation();
             myLatitude = Double.toString(mLastLocation.getLatitude());
             myLongitude = Double.toString(mLastLocation.getLongitude());
-            myLocation.setText(myLatitude + ", " + myLongitude);
+            myLocation.setText("My location: " + myLatitude + ", " + myLongitude);
         }
     };
 

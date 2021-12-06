@@ -7,22 +7,11 @@
     tools:context=".MainActivity">
 
     <TextView
-        android:id="@+id/myLocation"
-        android:layout_width="185dp"
-        android:layout_height="27dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="20dp"
-        android:text="None"
-        android:textSize="16sp"
-        app:layout_constraintStart_toEndOf="@+id/textView3"
-        app:layout_constraintTop_toBottomOf="@+id/batteryStatus" />
-
-    <TextView
         android:id="@+id/conninfo"
         android:layout_width="148dp"
         android:layout_height="28dp"
         android:layout_marginStart="20dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="59dp"
         android:text="Connection Status"
         android:textSize="20sp"
         android:textStyle="bold"
@@ -53,8 +42,8 @@
 
     <TextView
         android:id="@+id/infoView"
-        android:layout_width="363dp"
-        android:layout_height="193dp"
+        android:layout_width="318dp"
+        android:layout_height="152dp"
         android:layout_marginTop="8dp"
         android:background="#000000"
         android:backgroundTint="#412196F3"
@@ -63,24 +52,13 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/info" />
 
-    <TextView
-        android:id="@+id/batteryStatus"
-        android:layout_width="184dp"
-        android:layout_height="23dp"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="44dp"
-        android:text="None"
-        android:textSize="16sp"
-        app:layout_constraintStart_toEndOf="@+id/textView2"
-        app:layout_constraintTop_toBottomOf="@+id/listen" />
-
     <Button
         android:id="@+id/clearLog"
         style="@style/Widget.AppCompat.Button.Borderless"
-        android:layout_width="105dp"
-        android:layout_height="38dp"
+        android:layout_width="92dp"
+        android:layout_height="33dp"
         android:layout_marginTop="8dp"
-        android:layout_marginEnd="24dp"
+        android:layout_marginEnd="72dp"
         android:background="#FFFFFF"
         android:text="Clear Log"
         android:textColorLink="#D13D3D"
@@ -92,7 +70,7 @@
         android:id="@+id/info"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="16dp"
         android:text="Log"
         android:textSize="20sp"
         android:textStyle="bold"
@@ -101,27 +79,27 @@
         app:layout_constraintTop_toBottomOf="@+id/connStatus" />
 
     <TextView
-        android:id="@+id/textView2"
-        android:layout_width="146dp"
-        android:layout_height="27dp"
+        android:id="@+id/batteryStatus"
+        android:layout_width="360dp"
+        android:layout_height="32dp"
         android:layout_marginStart="20dp"
         android:layout_marginTop="44dp"
-        android:text="My Battery "
-        android:textSize="20sp"
+        android:text="My battery level: -"
+        android:textSize="16sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/listen" />
 
     <TextView
-        android:id="@+id/textView3"
-        android:layout_width="149dp"
-        android:layout_height="29dp"
+        android:id="@+id/myLocation"
+        android:layout_width="360dp"
+        android:layout_height="40dp"
         android:layout_marginStart="20dp"
         android:layout_marginTop="16dp"
-        android:text="My Location"
-        android:textSize="20sp"
+        android:text="My Location: -"
+        android:textSize="16sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView2" />
+        app:layout_constraintTop_toBottomOf="@+id/batteryStatus" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
