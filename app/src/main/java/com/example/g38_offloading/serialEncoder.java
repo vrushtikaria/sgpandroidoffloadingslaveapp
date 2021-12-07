@@ -4,6 +4,8 @@ import java.io.Serializable;
 
 public class serialEncoder implements Serializable {
 
+    private static final long serialVersionUID = 6529685098267757691L;
+
     private int[] a;
     private int[][] b;
     private int row;

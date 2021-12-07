@@ -2,8 +2,9 @@ package com.example.g38_offloading;
 
 import java.io.Serializable;
 
-// serialing encoder
 public class serialDecoder implements Serializable {
+
+    private static final long serialVersionUID = 6529685098267757690L;
 
     private int[] rowResult;
     private int row;

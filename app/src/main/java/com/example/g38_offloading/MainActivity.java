@@ -348,7 +348,7 @@ public class MainActivity extends AppCompatActivity {
                             //calculate the matrix multiplication
 //                            display_msg+= "Master sent data\n";
 
-                          display_msg += master_name +" sent " + Arrays.toString(tempMsg.getA());
+                          display_msg += master_name +" sent " + Arrays.toString(tempMsg.getA()) + "\n";
                             info.setText(display_msg.trim());
                             for (BluetoothSocket socket : connected_socket)
                             {
