@@ -97,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
     int battery_check_count=1; //maintained at slave to check when it has clicked reject offloading and trying to accept offloading again whether offloading was already completed or not at master
 
     DataConversionSerial dataSerializer;
-    serialEncoder response_temp;
+    serialDecoder response_temp;
     private Handler offloadingHandler=new Handler();  //handles the connection status and messages received
 
     //monitoring of own battery level
@@ -340,9 +340,9 @@ public class MainActivity extends AppCompatActivity {
 
                         Object o=dataSerializer.byteArrayToObject(readBuff);
                         //If the object received from client is of serialDecoder then slave has received work to act on masters request
-                        if(o instanceof serialDecoder)
+                        if(o instanceof serialEncoder)
                         {
-                            serialDecoder tempMsg = (serialDecoder) o;
+                            serialEncoder tempMsg = (serialEncoder) o;
 
 //                            display_msg += "Received row " + tempMsg.getRow() + " from Master" + "\n";
                             //calculate the matrix multiplication
@@ -367,7 +367,7 @@ public class MainActivity extends AppCompatActivity {
                                         //System.out.println(result_output[i]);
                                     }
                                     //Create a response of object of type serialEncoder
-                                    serialEncoder response = new serialEncoder(result_output, tempMsg.getRow(), device_name);
+                                    serialDecoder response = new serialDecoder(result_output, tempMsg.getRow(), device_name);
                                     //If it hasn't rejcted offloading send the result row  and row number to master
                                     if (rejectMsgFlag == 0 && battery_level>=battery_threshold) {
                                         sendReceive.write(dataSerializer.objectToByteArray(response));

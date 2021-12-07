@@ -2,51 +2,28 @@ package com.example.g38_offloading;
 
 import java.io.Serializable;
 
+// serialing encoder
 public class serialDecoder implements Serializable {
-    /*
-    This helps in serialization of the data that needs to be sent the slave by master
-    Master will send an object of Proxy request to slave which has 1 Row of matrix A, n*n matrix B and row number
-    On slave receiving this object will calculate the matrix multiplication and returns the row vector along with row number
-    */
-    private int[] a;
-    private int[][] b;
+
+    private int[] rowResult;
     private int row;
+    private String deviceName;
 
-    //constructor
-    public serialDecoder(int[] a, int[][] b, int row) {
-        this.setA(a);
-        this.setB(b);
+    public serialDecoder(int[] rowResult, int row, String deviceName) {
+        this.setrowResult(rowResult);
         this.setRow(row);
+        this.setDeviceName(deviceName);
     }
 
-    //getter methods
-    public int[] getA() {
-        return a;
+    public void setrowResult(int[] rowResult) {
+        this.rowResult = rowResult;
     }
 
-    public void setA(int[] a) {
-        this.a = a;
-    }
-
-    public int[][] getB() {
-        return b;
-    }
-
-    //setter methods
-    public void setB(int[][] b) {
-        this.b = b;
-    }
-
-    public int getRow() {
-        return row;
-    }
-//    public int[] geta() {
-//        return a;
-//    }
-//    public int[][] getb() {
-//        return b;
-//    }
     public void setRow(int row) {
         this.row = row;
+    }
+
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
     }
 }
