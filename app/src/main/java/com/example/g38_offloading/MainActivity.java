@@ -49,15 +49,29 @@ import java.util.Map;
 import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
+    Button startOffloading,clearLog;
+    TextView myLocation,connStatus,batteryStatus, info;
 
+    //variables for location
     FusedLocationProviderClient mFusedLocationClient;
-    int PERMISSION_UNIQUE_ID = 44;
-    int devicesAvailabilityCount =0;
+    int PERMISSION_ID = 44;
+    String myLatitude, myLongitude;
+    String master_name;
+    private FusedLocationProviderClient client;
 
-    int REQUEST_ENABLE_BLUETOOTH=1;
-    int batteryLevel=0;
-    int batteryThreshold=40;
+    //available device information like socket, device name and availability status
+    BluetoothAdapter bluetoothAdapter;
+    int available_devices=0; //maintained at master to keep track of number of available slaves that were free
 
+    ArrayList<BluetoothSocket> connected_socket=new ArrayList<BluetoothSocket>(); //maintains the list of connected sockets
+
+    SendReceive sendReceive;
+
+    int rejectMsgFlag=0; //maintained at slave if it has rejected offloading
+
+    public BluetoothServerSocket serverSocket;
+
+    //connections status checks
     static final int STATE_LISTENING =1;
     static final int STATE_CONNECTING=2;
     static final int STATE_CONNECTED=3;
@@ -66,37 +80,33 @@ public class MainActivity extends AppCompatActivity {
     static final int STATE_BATTERY_LOW=6;
     static final int STATE_DISCONNECTED=7;
     static final int STATE_DENIED =8;
+    int REQUEST_ENABLE_BLUETOOTH=1;
 
-    String deviceLocation ="";
-    String deviceName;
-    String displayMsg="";
-    String myLatitude, myLongitude;
-    String masterName;
+    Map<BluetoothSocket,ArrayList<String>> connection_status=new HashMap<BluetoothSocket, ArrayList<String>>(); //maintained at master to keep track of whether the slave was busy and free
 
-    BluetoothAdapter btAdapter;
-    ArrayList<BluetoothSocket> btSocketConnections =new ArrayList<BluetoothSocket>();
-    btConnector btConnector;
-    public BluetoothServerSocket serverSocket;
-    Map<BluetoothSocket,ArrayList<String>> btSocketStatus =new HashMap<BluetoothSocket, ArrayList<String>>();
-
-    Button startOffloading,clearLog;
-    TextView myLocation,connStatus,batteryStatus, info;
-
-    // for bluetooth connection
     private static final String APP_NAME= "MobOffloading";
-    private static final UUID MY_UUID=UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private static final UUID MY_UUID=UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); //UUID which helps in connection establishment between master and slave
+
+    int battery_level=0; //maintains the battery level of the slave
+    int battery_threshold=40; //battery threshold that should be maintained for the device to do offloading
+
+    String device_name;
+    String display_msg=""; //maintains what message to be displayed in message box
+
+    String device_loc ="";  //maintains latitude and longitude information
+    int battery_check_count=1; //maintained at slave to check when it has clicked reject offloading and trying to accept offloading again whether offloading was already completed or not at master
 
     DataConversionSerial dataSerializer;
-    serialEncoder response_localVar;
+    serialDecoder response_temp;
+    private Handler offloadingHandler=new Handler();  //handles the connection status and messages received
 
-    private Handler offloadingHandler=new Handler();
-
-    private BroadcastReceiver batteryMonitor = new BroadcastReceiver() {
+    //monitoring of own battery level
+    private BroadcastReceiver mBatInfoReceiver= new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent)
         {
-            batteryLevel=intent.getIntExtra(BatteryManager.EXTRA_LEVEL,0);
-            batteryStatus.setText("My battery level: " + String.valueOf(batteryLevel) + "%");
+            battery_level=intent.getIntExtra(BatteryManager.EXTRA_LEVEL,0);
+            batteryStatus.setText("My battery level: " + String.valueOf(battery_level) + "%");
         }
     };
 
@@ -105,6 +115,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+//        Bar and Launcher Icon
         ActionBar actionBar = getSupportActionBar();
         actionBar.setDisplayShowHomeEnabled(true);
         actionBar.setIcon(R.mipmap.ic_launcher);
@@ -118,15 +129,19 @@ public class MainActivity extends AppCompatActivity {
         clearLog = (Button) findViewById(R.id.clearLog);
         dataSerializer = new DataConversionSerial();
 
+        // show location
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        // method to get the location
         getLastLocation();
 
-        this.registerReceiver(this.batteryMonitor,new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        // set battery level
+        this.registerReceiver(this.mBatInfoReceiver,new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        device_name=BluetoothAdapter.getDefaultAdapter().getName(); //get the bluetooth name of the device
 
-        deviceName=BluetoothAdapter.getDefaultAdapter().getName();
-        btAdapter =BluetoothAdapter.getDefaultAdapter();
+        //Below will enable the bluetooth in the device in case it's disables
+        bluetoothAdapter=BluetoothAdapter.getDefaultAdapter();
 
-        if(!btAdapter.isEnabled())
+        if(!bluetoothAdapter.isEnabled())
         {
             Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableIntent,REQUEST_ENABLE_BLUETOOTH);
@@ -135,9 +150,9 @@ public class MainActivity extends AppCompatActivity {
         {
             @Override
             public void onClick(View v) {
-                Intent btIntent=new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-                btIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION,500);
-                startActivity(btIntent);
+                Intent intent_available=new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+                intent_available.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION,500);
+                startActivity(intent_available);
                 slaveListen slavelisten=new slaveListen();
                 slavelisten.start();
             }
@@ -157,9 +172,9 @@ public class MainActivity extends AppCompatActivity {
         {
             try
             {
-                if(batteryLevel>=batteryThreshold)
+                if(battery_level>=battery_threshold)
                 {
-                    serverSocket = btAdapter.listenUsingRfcommWithServiceRecord(APP_NAME, MY_UUID);
+                    serverSocket = bluetoothAdapter.listenUsingRfcommWithServiceRecord(APP_NAME, MY_UUID);
                 }
             }
             catch (IOException e)
@@ -172,17 +187,18 @@ public class MainActivity extends AppCompatActivity {
         {
             BluetoothSocket socket=null;
 
-            if(batteryLevel<batteryThreshold)
+            if(battery_level<battery_threshold)
             {
                 Message message=Message.obtain();
                 message.what=STATE_BATTERY_LOW;
                 handler.sendMessage(message);
             }
             //will keep on looking until it's connected to any device with the same UUID
-            while(socket==null && batteryLevel>=batteryThreshold)
+            while(socket==null && battery_level>=battery_threshold)
             {
                 try
                 {
+                    System.out.println("Inside sever");
                     Message message=Message.obtain();
                     message.what=STATE_LISTENING;
                     handler.sendMessage(message);
@@ -200,13 +216,13 @@ public class MainActivity extends AppCompatActivity {
 
                 if(socket!=null)
                 {
-                    btSocketConnections.add(socket);
-                    masterName=socket.getRemoteDevice().getName();
+                    connected_socket.add(socket);
+                    master_name=socket.getRemoteDevice().getName();
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                            builder.setMessage( masterName+ " Master wants to offload matrix multiplcation, monitor location and battery level ?").setPositiveButton("Accept", dialogClickListener)
+                            builder.setMessage( master_name+ " Master wants to offload matrix multiplcation, monitor location and battery level ?").setPositiveButton("Accept", dialogClickListener)
                                     .setNegativeButton("Deny", dialogClickListener).show();
                         }
                     });
@@ -217,71 +233,78 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void accept_master(BluetoothSocket socket) {
+        System.out.println("Inside sever");
         Message message = Message.obtain();
         message.what = STATE_CONNECTED;
         handler.sendMessage(message);
 //        connected_socket.add(socket);
 
-        if (!btSocketStatus.containsKey(socket)) {
-            ArrayList<String> btSocketTempArray = new ArrayList<String>();
-            btSocketTempArray.add(socket.getRemoteDevice().getName());
-            btSocketTempArray.add("free");
-            devicesAvailabilityCount++;
-            btSocketStatus.put(socket, btSocketTempArray);
+        if (!connection_status.containsKey(socket)) {
+            ArrayList<String> temp = new ArrayList<String>();
+            temp.add(socket.getRemoteDevice().getName());
+            temp.add("free");
+            available_devices++;
+            connection_status.put(socket, temp);
         }
-        btConnector = new btConnector(socket);
-        btConnector.start();
+        sendReceive = new SendReceive(socket);
+        sendReceive.start();
 
         try {
             //Toast.makeText(getApplicationContext(),"check"+location,Toast.LENGTH_LONG).show();
-            if (deviceLocation != null && !deviceLocation.isEmpty()) {
-                btConnector.write(dataSerializer.objectToByteArray(deviceName + ":Battery Level:" + Integer.toString(batteryLevel) + ":Location:" + deviceLocation));
+            if (device_loc != null && !device_loc.isEmpty()) {
+                sendReceive.write(dataSerializer.objectToByteArray(device_name + ":Battery Level:" + Integer.toString(battery_level) + ":Location:" + device_loc));
             } else {
-                btConnector.write(dataSerializer.objectToByteArray(deviceName + ":Battery Level:" + Integer.toString(batteryLevel)));
+                sendReceive.write(dataSerializer.objectToByteArray(device_name + ":Battery Level:" + Integer.toString(battery_level)));
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+
+    // dialogue box fo4r accepting offloading
     DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
         @Override
         public void onClick(DialogInterface dialog, int which) {
             switch (which){
                 case DialogInterface.BUTTON_POSITIVE:
-                    accept_master(btSocketConnections.get(0));
+                    //Yes button clicked
+                    accept_master(connected_socket.get(0));
                     break;
 
                 case DialogInterface.BUTTON_NEGATIVE:
+                    //No button clicked
                     Message message=Message.obtain();
                     message.what=STATE_DENIED;
+//                    System.out.println("State Denied. Message Set");
                     handler.sendMessage(message);
-                    send_denied_to_master(btSocketConnections.get(0));
-                    btSocketConnections.remove(0);
-                    btConnector =null;
+                    send_denied_to_master(connected_socket.get(0));
+                    connected_socket.remove(0);
+                    sendReceive =null;
                     break;
             }
         }
 
         private void send_denied_to_master(BluetoothSocket socket) {
-            if (!btSocketStatus.containsKey(socket)) {
-                ArrayList<String> btSocketTempArray = new ArrayList<String>();
-                btSocketTempArray.add(socket.getRemoteDevice().getName());
-                btSocketTempArray.add("free");
-                devicesAvailabilityCount++;
-                btSocketStatus.put(socket, btSocketTempArray);
+            if (!connection_status.containsKey(socket)) {
+                ArrayList<String> temp = new ArrayList<String>();
+                temp.add(socket.getRemoteDevice().getName());
+                temp.add("free");
+                available_devices++;
+                connection_status.put(socket, temp);
             }
-            btConnector = new btConnector(socket);
-            btConnector.start();
+            sendReceive = new SendReceive(socket);
+            sendReceive.start();
 
             try {
-                btConnector.write(dataSerializer.objectToByteArray(deviceName + ":Denied:NoConsent"));
+                sendReceive.write(dataSerializer.objectToByteArray(device_name + ":Denied:NoConsent"));
 
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
     };
+    //This handler will handle what to do based on the msg received and sets the message in status according to it
     Handler handler=new Handler(new Handler.Callback()
     {
         @Override
@@ -296,7 +319,7 @@ public class MainActivity extends AppCompatActivity {
                     connStatus.setText("Connecting");
                     break;
                 case STATE_CONNECTED:
-                    connStatus.setText("Connected to " +masterName);
+                    connStatus.setText("Connected to " +master_name);
                     break;
                 case STATE_CONNECTION_FAILED:
                     connStatus.setText("Connection Failed");
@@ -307,80 +330,103 @@ public class MainActivity extends AppCompatActivity {
                 case STATE_DISCONNECTED:
                     connStatus.setText("Disconnected");
                     break;
+
+                //this functionality will be called if slave has received message from master or viceversa
                 case STATE_MESSAGE_RECEIVED:
+                    //If the device is acting as server
                     try
                     {
                         byte[] readBuff = (byte[]) msg.obj;
 
                         Object o=dataSerializer.byteArrayToObject(readBuff);
-                        if(o instanceof serialDecoder)
+                        //If the object received from client is of serialDecoder then slave has received work to act on masters request
+                        if(o instanceof serialEncoder)
                         {
-                            serialDecoder localVarMsg = (serialDecoder) o;
-                            displayMsg += masterName +" sent " + Arrays.toString(localVarMsg.getA()) + "\n";
-                            info.setText(displayMsg.trim());
-                            for (BluetoothSocket socket : btSocketConnections)
+                            serialEncoder tempMsg = (serialEncoder) o;
+
+//                            display_msg += "Received row " + tempMsg.getRow() + " from Master" + "\n";
+                            //calculate the matrix multiplication
+//                            display_msg+= "Master sent data\n";
+
+                          display_msg += master_name +" sent " + Arrays.toString(tempMsg.getA());
+                            info.setText(display_msg.trim());
+                            for (BluetoothSocket socket : connected_socket)
                             {
                                 if (socket != null)
                                 {
-                                    int[] result_output = new int[localVarMsg.getB()[0].length];
-                                    for (int i = 0; i < localVarMsg.getB()[0].length; i++) {
+                                    int[] result_output = new int[tempMsg.getB()[0].length];
+                                    for (int i = 0; i < tempMsg.getB()[0].length; i++) {
                                         int sum = 0;
-                                        for (int j = 0; j < localVarMsg.getA().length; j++) {
-                                            sum += localVarMsg.getA()[j] * localVarMsg.getB()[j][i];
+                                        for (int j = 0; j < tempMsg.getA().length; j++) {
+                                            sum += tempMsg.getA()[j] * tempMsg.getB()[j][i];
 
                                         }
                                         result_output[i] = sum;
+                                        System.out.println("i" + i);
+                                        // for(int )
+                                        //System.out.println(result_output[i]);
                                     }
-                                    serialEncoder response = new serialEncoder(result_output, localVarMsg.getRow(), deviceName);
-                                    if (batteryLevel>=batteryThreshold) {
-                                        btConnector.write(dataSerializer.objectToByteArray(response));
+                                    //Create a response of object of type serialEncoder
+                                    serialDecoder response = new serialDecoder(result_output, tempMsg.getRow(), device_name);
+                                    //If it hasn't rejcted offloading send the result row  and row number to master
+                                    if (rejectMsgFlag == 0 && battery_level>=battery_threshold) {
+                                        sendReceive.write(dataSerializer.objectToByteArray(response));
                                     }
+                                    //otherwise temporarily store the row result in case it has accepted offloading and has to send row result
                                     else
                                     {
-                                        response_localVar=response;
+                                        response_temp=response;
                                     }
 
-                                    if (batteryLevel < batteryThreshold) {
-                                        btConnector.write(dataSerializer.objectToByteArray(deviceName + ":Battery Level:Battery level low"));
-                                        if(btSocketStatus.size()>0)
+                                    if (battery_level < battery_threshold) {
+                                        sendReceive.write(dataSerializer.objectToByteArray(device_name + ":Battery Level:Battery level low"));
+                                        //bluetoothAdapter.disable();
+                                        //connection_status = new HashMap<BluetoothSocket, ArrayList<String>>();
+                                        if(connection_status.size()>0)
                                         {
-                                            btSocketStatus.remove(btSocketConnections.get(0));
-                                            btSocketConnections.remove(0);
+                                            connection_status.remove(connected_socket.get(0));
+                                            connected_socket.remove(0);
                                         }
                                     }
 
                                 }
                             }
                         }
+                        //if object received is of type string
                         else if(o instanceof String)
                         {
-                            String localVarMsg=(String) o;
-                            String[] messages=localVarMsg.split(":");
+                            String tempMsg=(String) o;
+                            //Toast.makeText(getApplicationContext(),tempMsg,Toast.LENGTH_LONG).show();
+                            String[] messages=tempMsg.split(":");
+                            //If slave has received Battery level low from master disconnect from master
                             if(messages[2].equals("Battery level low"))
                             {
-                                info.setText("Master's Battery is Low");
                                 connStatus.setText("Disconnected");
-                                if(btSocketStatus.size()>0)
+                                info.setText("Battery low at master");
+                                if(connection_status.size()>0)
                                 {
                                     serverSocket.close();
-                                    btSocketStatus.remove(btSocketConnections.get(0));
-                                    btSocketConnections.remove(0);
+                                    connection_status.remove(connected_socket.get(0));
+                                    connected_socket.remove(0);
                                 }
                             }
+                            //else if slave has received message Disconnect from master, disconnect from master
                             else if(messages[2].equals("Disconnect"))
                             {
                                 connStatus.setText("Disconnected");
                                 info.setText("Disconnected");
-                                if(btSocketStatus.size()>0)
+                                if(connection_status.size()>0)
                                 {
                                     serverSocket.close();
-                                    btSocketStatus.remove(btSocketConnections.get(0));
-                                    btSocketConnections.remove(0);
+                                    connection_status.remove(connected_socket.get(0));
+                                    connected_socket.remove(0);
                                 }
 
                             }
+                            //else master is just asking for battery level stats
                             else {
-                                btConnector.write(dataSerializer.objectToByteArray(deviceName + ":Battery Level:" + Integer.toString(batteryLevel)));
+                                battery_check_count++;
+                                sendReceive.write(dataSerializer.objectToByteArray(device_name + ":Battery Level:" + Integer.toString(battery_level)));
                             }
                         }
                         else
@@ -401,75 +447,83 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
     });
-    private class btConnector extends Thread
+    /*
+    This class is mainly responsible for sending and receiving messages based on the socket with the help of input stream and output stream
+     */
+    private class SendReceive extends Thread
     {
         private final BluetoothSocket bluetoothSocket;
         private final InputStream inputStream;
         private final OutputStream outputStream;
 
-        public btConnector(BluetoothSocket socket)
+        public SendReceive (BluetoothSocket socket)
         {
             bluetoothSocket=socket;
-            InputStream localVarIn=null;
-            OutputStream localVarOut=null;
+            InputStream tempIn=null;
+            OutputStream tempOut=null;
 
 
             try
             {
-                localVarIn=bluetoothSocket.getInputStream();
-                localVarOut=bluetoothSocket.getOutputStream();
+                tempIn=bluetoothSocket.getInputStream();
+                tempOut=bluetoothSocket.getOutputStream();
             }
             catch (IOException e)
             {
-                if(btSocketStatus.containsKey(bluetoothSocket))
+                if(connection_status.containsKey(bluetoothSocket))
                 {
-                    if(btSocketStatus.get(bluetoothSocket).get(1)=="free"){
-                        devicesAvailabilityCount--;
+                    if(connection_status.get(bluetoothSocket).get(1)=="free"){
+                        available_devices--;
                     }
-                    btSocketStatus.remove(bluetoothSocket);
-                    btSocketConnections.remove(bluetoothSocket);
+                    connection_status.remove(bluetoothSocket);
+                    connected_socket.remove(bluetoothSocket);
 
                 }
                 e.printStackTrace();
             }
 
-            inputStream=localVarIn;
-            outputStream=localVarOut;
+            inputStream=tempIn;
+            outputStream=tempOut;
         }
 
+
+        //This will always check if there is any message that has to be sent to a particular socket form this device by always reading the output stream with the help of input stream
         public void run()
         {
             byte[] buffer=new byte[102400];
             int bytes;
-            while(batteryLevel>=batteryThreshold)
+
+
+            while(battery_level>=battery_threshold)
             {
                 try
                 {
-                    if(btSocketStatus.containsKey(bluetoothSocket)) {
+                    if(connection_status.containsKey(bluetoothSocket)) {
                         bytes = inputStream.read(buffer);
+                        System.out.println("I am here: " + bytes);
                         handler.obtainMessage(STATE_MESSAGE_RECEIVED, bytes, -1, buffer).sendToTarget();
                     }
 
                 }
                 catch (IOException e)
                 {
-                    if(btSocketStatus.containsKey(bluetoothSocket))
+                    if(connection_status.containsKey(bluetoothSocket))
                     {
-                        if(btSocketStatus.get(bluetoothSocket).get(1)=="free"){
-                            devicesAvailabilityCount--;
+                        if(connection_status.get(bluetoothSocket).get(1)=="free"){
+                            available_devices--;
                         }
-                        btSocketStatus.remove(bluetoothSocket);
-                        btSocketConnections.remove(bluetoothSocket);
+                        connection_status.remove(bluetoothSocket);
+                        connected_socket.remove(bluetoothSocket);
                     }
                     e.printStackTrace();
                 }
             }
-            if(batteryLevel<batteryThreshold)
+            if(battery_level<battery_threshold)
             {
 
                 try
                 {
-                    write(dataSerializer.objectToByteArray(deviceName+":Battery Level:Battery level low"));
+                    write(dataSerializer.objectToByteArray(device_name+":Battery Level:Battery level low"));
                 }
                 catch (IOException e)
                 {
@@ -482,13 +536,13 @@ public class MainActivity extends AppCompatActivity {
                 }
                 catch (IOException e)
                 {
-                    if(btSocketStatus.containsKey(bluetoothSocket))
+                    if(connection_status.containsKey(bluetoothSocket))
                     {
-                        if(btSocketStatus.get(bluetoothSocket).get(1)=="free"){
-                            devicesAvailabilityCount--;
+                        if(connection_status.get(bluetoothSocket).get(1)=="free"){
+                            available_devices--;
                         }
-                        btSocketStatus.remove(bluetoothSocket);
-                        btSocketConnections.remove(bluetoothSocket);
+                        connection_status.remove(bluetoothSocket);
+                        connected_socket.remove(bluetoothSocket);
                     }
                     e.printStackTrace();
                     Message message=Message.obtain();
@@ -498,12 +552,14 @@ public class MainActivity extends AppCompatActivity {
             }
 
         }
+        //This function is used to write the message to the output stream of the particular device that has to be sent to certain socket
         public void write(byte[] bytes)
         {
             try
             {
-                if(batteryLevel>=batteryThreshold)
+                if(battery_level>=battery_threshold)
                 {
+                    System.out.println("In outputstream: "+bytes);
                     outputStream.write(bytes);
                 }
             }
@@ -535,7 +591,7 @@ public class MainActivity extends AppCompatActivity {
                         } else {
                             myLatitude=Double.toString(location.getLatitude());
                             myLongitude=Double.toString(location.getLongitude());
-                            deviceLocation=myLatitude+","+myLongitude;
+                            device_loc=myLatitude+","+myLongitude;
 //
                             myLocation.setText("My location: " + myLatitude + ", " + myLongitude);
                         }
@@ -585,7 +641,7 @@ public class MainActivity extends AppCompatActivity {
     // request for location permissions
     private void requestPermissions() {
         ActivityCompat.requestPermissions(this, new String[]{
-                Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_UNIQUE_ID);
+                Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_ID);
     }
 
     // check if location is enabled
@@ -599,7 +655,7 @@ public class MainActivity extends AppCompatActivity {
     onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        if (requestCode == PERMISSION_UNIQUE_ID) {
+        if (requestCode == PERMISSION_ID) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 getLastLocation();
             }
