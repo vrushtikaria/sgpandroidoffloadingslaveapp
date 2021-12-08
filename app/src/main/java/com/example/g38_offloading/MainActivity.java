@@ -56,8 +56,13 @@ public class MainActivity extends AppCompatActivity {
 
     int REQUEST_ENABLE_BLUETOOTH=1;
     int batteryLevel=0;
-    int batteryThreshold=40;
+    int batteryThreshold=30;
 
+    int[] inputs_A;
+    int[][] inputs_B;
+    int[] output_matrix;
+
+    boolean rejectOffloadingFlag=false;
     static final int STATE_LISTENING =1;
     static final int STATE_CONNECTING=2;
     static final int STATE_CONNECTED=3;
@@ -72,17 +77,17 @@ public class MainActivity extends AppCompatActivity {
     String displayMsg="";
     String myLatitude, myLongitude;
     String masterName;
-
+    String computeOutput="";
     BluetoothAdapter btAdapter;
     ArrayList<BluetoothSocket> btSocketConnections =new ArrayList<BluetoothSocket>();
     btConnector btConnector;
     public BluetoothServerSocket serverSocket;
     Map<BluetoothSocket,ArrayList<String>> btSocketStatus =new HashMap<BluetoothSocket, ArrayList<String>>();
 
-    Button startOffloading,clearLog;
+    Button startOffloading,clearLog, RejectOffloading;
     TextView myLocation,connStatus,batteryStatus, info;
 
-    // for bluetooth connection
+    // for bluetooth connection Unique APP NAME and UUID for identification
     private static final String APP_NAME= "MobOffloading";
     private static final UUID MY_UUID=UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
@@ -116,6 +121,8 @@ public class MainActivity extends AppCompatActivity {
         info.setMovementMethod(ScrollingMovementMethod.getInstance());
         startOffloading = (Button) findViewById(R.id.listen);
         clearLog = (Button) findViewById(R.id.clearLog);
+        RejectOffloading = (Button) findViewById(R.id.RejectOffloading);
+        RejectOffloading.setEnabled(false);
         dataSerializer = new DataConversionSerial();
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -149,6 +156,23 @@ public class MainActivity extends AppCompatActivity {
                 info.setText("");
             }
         });
+
+        RejectOffloading.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!rejectOffloadingFlag) {
+                    computeOutput = "";
+                    rejectOffloadingFlag = true;
+                    RejectOffloading.setText("Accept Offloading");
+                }
+                else{
+                    computeOutput = "";
+                    rejectOffloadingFlag = false;
+                    RejectOffloading.setText("Reject Offloading");
+                }
+            }
+        });
+
     }
 
     private class slaveListen extends Thread
@@ -235,6 +259,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 btConnector.write(dataSerializer.objectToByteArray(deviceName + ":Battery Level:" + Integer.toString(batteryLevel)));
             }
+            RejectOffloading.setEnabled(true);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -309,10 +334,14 @@ public class MainActivity extends AppCompatActivity {
                         byte[] readBuff = (byte[]) msg.obj;
 
                         Object o=dataSerializer.byteArrayToObject(readBuff);
-                        if(o instanceof serialEncoder)
+                        if(o instanceof serialEncoder && !rejectOffloadingFlag)
                         {
                             serialEncoder localVarMsg = (serialEncoder) o;
                             displayMsg += masterName +" sent " + Arrays.toString(localVarMsg.getA()) + "\n";
+                            inputs_A = new int[localVarMsg.getA().length];
+                            inputs_B = new int[localVarMsg.getB().length][localVarMsg.getB()[0].length];
+                            inputs_A = localVarMsg.getA();
+                            inputs_B = localVarMsg.getB();
                             info.setText(displayMsg.trim());
                             for (BluetoothSocket socket : btSocketConnections)
                             {
@@ -328,6 +357,21 @@ public class MainActivity extends AppCompatActivity {
                                         result_output[i] = sum;
                                     }
                                     serialDecoder response = new serialDecoder(result_output, localVarMsg.getRow(), deviceName);
+                                    output_matrix = new int[result_output.length];
+                                    output_matrix = result_output;
+                                    String a="Input Received : A*B\n";
+                                    int n = (inputs_A.length*4) + 6;
+                                    String space = String.format("%1$"+n+"s", "");
+                                    for (int i=0; i<inputs_B.length;i++){
+                                        if (i==0){
+                                            a+= Arrays.toString(inputs_A) +" * "+Arrays.toString(inputs_B[i])+"\n";
+                                        }
+                                        else{
+                                            a+= space + Arrays.toString(inputs_B[i])+"\n";
+                                        }
+                                    }
+                                    computeOutput+=a + "Output : " + Arrays.toString(result_output) +"\n\n";
+                                    info.setText(computeOutput);
                                     if (batteryLevel>=batteryThreshold) {
                                         btConnector.write(dataSerializer.objectToByteArray(response));
                                     }
@@ -344,7 +388,6 @@ public class MainActivity extends AppCompatActivity {
                                             btSocketConnections.remove(0);
                                         }
                                     }
-
                                 }
                             }
                         }
@@ -513,8 +556,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
-    //--------------------------------------------------------------------------------------------------------
-    //for location of device
     @SuppressLint("MissingPermission")
     private void getLastLocation() {
         // check if permissions are given

@@ -11,7 +11,7 @@
         android:layout_width="148dp"
         android:layout_height="28dp"
         android:layout_marginStart="20dp"
-        android:layout_marginTop="59dp"
+        android:layout_marginTop="20dp"
         android:text="Connection Status"
         android:textSize="20sp"
         android:textStyle="bold"
@@ -42,8 +42,8 @@
 
     <TextView
         android:id="@+id/infoView"
-        android:layout_width="318dp"
-        android:layout_height="152dp"
+        android:layout_width="364dp"
+        android:layout_height="188dp"
         android:layout_marginTop="8dp"
         android:background="#000000"
         android:backgroundTint="#412196F3"
@@ -57,8 +57,8 @@
         style="@style/Widget.AppCompat.Button.Borderless"
         android:layout_width="92dp"
         android:layout_height="33dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="72dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="20dp"
         android:background="#FFFFFF"
         android:text="Clear Log"
         android:textColorLink="#D13D3D"
@@ -70,11 +70,12 @@
         android:id="@+id/info"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         android:text="Log"
         android:textSize="20sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/connStatus" />
 
@@ -82,8 +83,8 @@
         android:id="@+id/batteryStatus"
         android:layout_width="360dp"
         android:layout_height="32dp"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="44dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="20dp"
         android:text="My battery level: -"
         android:textSize="16sp"
         android:textStyle="bold"
@@ -101,5 +102,23 @@
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/batteryStatus" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_begin="20dp" />
+
+    <Button
+        android:id="@+id/RejectOffloading"
+        android:layout_width="278dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="12dp"
+        android:text="Reject Offloading"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.496"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/clearLog" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
